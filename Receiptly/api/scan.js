@@ -60,8 +60,6 @@ ${taxonomyGuide}`;
       });
     });
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
     const payload = {
       contents: [{ role: "user", parts: messageParts }],
       generationConfig: {
@@ -103,31 +101,49 @@ ${taxonomyGuide}`;
       },
     };
 
-    const geminiRes = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    // Try gemini-3-flash-preview first, then fall back to gemini-2.5-flash
+    const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash"];
+    let lastErrorMessage = "Unknown Gemini API error";
 
-    if (!geminiRes.ok) {
-      const errDetail = await geminiRes.text();
-      console.error("Gemini API error:", geminiRes.status, errDetail);
-      return res
-        .status(502)
-        .json({ error: "AI receipt extraction failed. Please try again." });
+    for (const modelName of modelsToTry) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+      const geminiRes = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (geminiRes.ok) {
+        const result = await geminiRes.json();
+        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) {
+          return res.status(502).json({ error: "Empty response from AI." });
+        }
+        return res.status(200).json(JSON.parse(jsonText));
+      }
+
+      const errBody = await geminiRes.text();
+      console.error(
+        `Gemini API error (${modelName}):`,
+        geminiRes.status,
+        errBody,
+      );
+      try {
+        const parsedErr = JSON.parse(errBody);
+        lastErrorMessage =
+          parsedErr?.error?.message || `HTTP ${geminiRes.status}`;
+      } catch {
+        lastErrorMessage = `HTTP ${geminiRes.status}`;
+      }
     }
 
-    const result = await geminiRes.json();
-    const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!jsonText) {
-      return res.status(502).json({ error: "Empty response from AI." });
-    }
-
-    return res.status(200).json(JSON.parse(jsonText));
+    return res
+      .status(502)
+      .json({ error: `AI extraction failed: ${lastErrorMessage}` });
   } catch (err) {
     console.error("Serverless scan handler error:", err);
     return res
       .status(500)
-      .json({ error: "Unexpected server error while scanning." });
+      .json({ error: `Unexpected server error: ${err.message}` });
   }
 }
