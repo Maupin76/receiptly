@@ -107,8 +107,8 @@ ${taxonomyGuide}
     // Try latest preview model first, then automatically fall back to high-capacity production models
     const modelsToTry = [
       "gemini-3-flash-preview",
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite",
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
     ];
     let lastErrorMessage = "Unknown Gemini API error";
 
