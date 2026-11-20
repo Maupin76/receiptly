@@ -104,8 +104,12 @@ ${taxonomyGuide}
       },
     };
 
-    // Try gemini-3-flash-preview first, then fall back to gemini-3.8-flash
-    const modelsToTry = ["gemini-3-flash-preview", "gemini-3.8-flash"];
+    // Try latest preview model first, then automatically fall back to high-capacity production models
+    const modelsToTry = [
+      "gemini-3-flash-preview",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+    ];
     let lastErrorMessage = "Unknown Gemini API error";
 
     for (const modelName of modelsToTry) {
