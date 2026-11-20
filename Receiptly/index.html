@@ -12,9 +12,9 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <meta name="apple-mobile-web-app-title" content="Receiptly" />
+    <meta name="apple-mobile-web-app-title" content="ScanLedger" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Receiptly - Kitchen & Food Truck Receipt Scanner</title>
+    <title>ScanLedger - Expense Tracking for Busines or Personal.</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link
@@ -74,7 +74,7 @@
               />
             </svg>
           </div>
-          <h1 class="text-2xl font-extrabold tracking-tight">Receiptly</h1>
+          <h1 class="text-2xl font-extrabold tracking-tight">ScanLedger</h1>
           <p class="text-xs text-slate-400">
             Scan receipts &amp; multi-page invoices, sort expenses automatically
             &amp; sync to the cloud.
@@ -145,7 +145,7 @@
               type="submit"
               class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition"
             >
-              Log In to Receiptly
+              Log In to ScanLedger
             </button>
           </form>
         </div>
@@ -187,7 +187,7 @@
             <div>
               <div class="flex items-center space-x-1.5">
                 <h1 class="font-bold text-base leading-tight tracking-tight">
-                  Receiptly
+                  ScanLedger
                 </h1>
                 <span
                   id="cloudSyncIndicator"
@@ -1350,7 +1350,7 @@
             "py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs transition";
           signUpTab.className =
             "py-2 rounded-lg text-slate-400 hover:text-white font-bold text-xs transition";
-          submitBtn.textContent = "Log In to Receiptly";
+          submitBtn.textContent = "Log In to ScanLedger";
         } else {
           signUpTab.className =
             "py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs transition";
@@ -1402,7 +1402,7 @@
           submitBtn.disabled = false;
           submitBtn.textContent =
             authMode === "signin"
-              ? "Log In to Receiptly"
+              ? "Log In to ScanLedger"
               : "Create Free Account";
         }
       }
@@ -2903,7 +2903,7 @@
         const link = document.createElement("a");
         const todayStr = new Date().toISOString().split("T")[0];
         link.setAttribute("href", url);
-        link.setAttribute("download", `Receiptly_Expenses_${todayStr}.csv`);
+        link.setAttribute("download", `ScanLedger_Expenses_${todayStr}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

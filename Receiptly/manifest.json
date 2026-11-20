@@ -1,6 +1,6 @@
 {
-  "name": "Receiptly - Receipt & Expense AI",
-  "short_name": "Receiptly",
+  "name": "ScanLedger - Receipt & Expense AI",
+  "short_name": "ScanLedger",
   "description": "Scan single & multi-page receipts and invoices, group kitchen & supply expenses automatically, and export to spreadsheets.",
   "start_url": "/",
   "display": "standalone",
