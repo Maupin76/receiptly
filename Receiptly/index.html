@@ -560,7 +560,7 @@
               </h3>
               <p class="text-xs text-slate-500 mt-1">
                 Combining line items across pages, matching final invoice totals
-                &amp; sorting into Meat, Consumables, Utensils &amp; Equipment.
+                &amp; sorting into categories.
               </p>
             </div>
             <div
@@ -1192,7 +1192,7 @@
                 id="customCatInput"
                 list="existingCategoriesList"
                 type="text"
-                placeholder="e.g. Meat & Seafood or Bakery"
+                placeholder="e.g. Meat & Seafood or Vehicle & Fuel"
                 class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm"
               />
               <datalist id="existingCategoriesList"></datalist>
@@ -1204,7 +1204,7 @@
               <input
                 id="customSubcatInput"
                 type="text"
-                placeholder="e.g. Lamb, Crab, Deli Paper, Fryers"
+                placeholder="e.g. Lamb, Gas, Fresh Flowers, Fryers"
                 class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm"
               />
             </div>
@@ -1321,7 +1321,7 @@
 
     <script>
       // =========================================================================
-      // SUPABASE CONFIGURATION (PASTE YOUR PUBLISHABLE KEY FROM STEP 2 BELOW!)
+      // SUPABASE CONFIGURATION
       // =========================================================================
       const SUPABASE_URL = "https://nqprgnxnmwuivrbmepxa.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY =
@@ -1425,7 +1425,7 @@
       }
 
       // =========================================================================
-      // STATE & DEFAULT CATEGORY TAXONOMY
+      // STATE, DEFAULT CATEGORY TAXONOMY & SMART LEARNING MEMORY
       // =========================================================================
       const DEFAULT_TAXONOMY = {
         "Meat & Seafood": [
@@ -1494,6 +1494,8 @@
       };
 
       let taxonomy = JSON.parse(JSON.stringify(DEFAULT_TAXONOMY));
+      let learnedRules = {};
+      const MEMORY_STORAGE_KEY = "scanledger_learned_rules_v1";
       let receipts = [];
       let currentDraftReceipt = null;
       let stagedPages = [];
@@ -1502,11 +1504,64 @@
         "Consumables & Disposables",
       ]);
 
+      function loadLearnedRules() {
+        try {
+          const raw = localStorage.getItem(MEMORY_STORAGE_KEY);
+          learnedRules = raw ? JSON.parse(raw) : {};
+        } catch {
+          learnedRules = {};
+        }
+      }
+
+      function rememberCategoryChoice(
+        retailer,
+        itemName,
+        category,
+        subcategory,
+      ) {
+        if (!category || !subcategory) return;
+        const cleanItem = (itemName || "").trim().toLowerCase();
+        if (cleanItem.length >= 3) {
+          learnedRules[`item:${cleanItem}`] = { category, subcategory };
+        }
+        const cleanVendor = (retailer || "").trim().toLowerCase();
+        if (
+          cleanVendor &&
+          (category.toLowerCase().includes("fuel") ||
+            category.toLowerCase().includes("gas"))
+        ) {
+          learnedRules[`vendor:${cleanVendor}`] = { category, subcategory };
+        }
+        try {
+          localStorage.setItem(
+            MEMORY_STORAGE_KEY,
+            JSON.stringify(learnedRules),
+          );
+        } catch {}
+      }
+
+      function applyLearnedRulesToReceipt(receiptObj) {
+        if (!receiptObj || !Array.isArray(receiptObj.items)) return receiptObj;
+        const cleanVendor = (receiptObj.retailer || "").trim().toLowerCase();
+        receiptObj.items.forEach((item) => {
+          const cleanItem = (item.name || "").trim().toLowerCase();
+          const match =
+            learnedRules[`item:${cleanItem}`] ||
+            learnedRules[`vendor:${cleanVendor}`];
+          if (match && match.category && match.subcategory) {
+            item.category = match.category;
+            item.subcategory = match.subcategory;
+          }
+        });
+        return receiptObj;
+      }
+
       // =========================================================================
       // CLOUD SYNC (SUPABASE) + NAVIGATION & TOAST HELPERS
       // =========================================================================
       async function syncFromSupabase() {
         if (!currentUser) return;
+        loadLearnedRules();
         try {
           const { data: catRow } = await supabaseClient
             .from("user_categories")
@@ -1814,6 +1869,8 @@
           const extractedData =
             await analyzeMultiPageReceiptWithGemini(pagesSnapshot);
           extractedData.pageCount = pageCount;
+
+          applyLearnedRulesToReceipt(extractedData);
 
           if (extractedData.items && Array.isArray(extractedData.items)) {
             extractedData.items.forEach((item) => {
@@ -2259,7 +2316,7 @@
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase text-slate-400 mb-0.5">Sub-Group</label>
-                <select onchange="updateDraftItemField(${idx}, 'subcategory', this.value)"
+                <select onchange="updateDraftItemSubcategory(${idx}, this.value)"
                   class="w-full px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   ${subcatOptions}
                 </select>
@@ -2301,7 +2358,25 @@
         currentDraftReceipt.items[idx].category = newCategory;
         const subs = taxonomy[newCategory] || ["General"];
         currentDraftReceipt.items[idx].subcategory = subs[0];
+        rememberCategoryChoice(
+          document.getElementById("editRetailer")?.value ||
+            currentDraftReceipt.retailer,
+          currentDraftReceipt.items[idx].name,
+          newCategory,
+          subs[0],
+        );
         renderDraftItems();
+      }
+
+      function updateDraftItemSubcategory(idx, newSubcategory) {
+        currentDraftReceipt.items[idx].subcategory = newSubcategory;
+        rememberCategoryChoice(
+          document.getElementById("editRetailer")?.value ||
+            currentDraftReceipt.retailer,
+          currentDraftReceipt.items[idx].name,
+          currentDraftReceipt.items[idx].category,
+          newSubcategory,
+        );
       }
 
       function updateDraftItemQtyOrPrice(idx, field, rawVal) {
@@ -2552,7 +2627,7 @@
           listContainer.innerHTML = `
           <div class="bg-white rounded-2xl p-8 text-center border border-slate-200/80 space-y-2">
             <p class="text-sm font-bold text-slate-700">No expenses logged yet</p>
-            <p class="text-xs text-slate-500">Scan a receipt or load the sample receipt to see your Meat, Consumables, Utensils &amp; Equipment breakdown.</p>
+            <p class="text-xs text-slate-500">Scan a receipt or load the sample receipt to see your expense breakdown.</p>
             <button onclick="switchTab('scan')" class="mt-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs">
               Go to Scanner
             </button>
@@ -2662,7 +2737,7 @@
           container.innerHTML = `
           <div class="bg-white rounded-2xl p-8 text-center border border-slate-200/80">
             <p class="text-sm font-bold text-slate-700">No matching receipts</p>
-            <p class="text-xs text-slate-500 mt-1">Scan a supply receipt to build your digital receipt log.</p>
+            <p class="text-xs text-slate-500 mt-1">Scan a receipt to build your digital receipt log.</p>
           </div>
         `;
           return;
